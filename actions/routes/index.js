@@ -32,11 +32,16 @@ router.get('/:id', (req, res) => {
 
 router.post('/', (req, res) => {
   if (req.body.project_id && req.body.description && req.body.notes) {
-    actionDb.insert(req.body).then(id => {
-      res.status(201).json({ message: 'Your action was successfully added'})
-    }).catch(err => {
-      res.status(500).json({ message: 'Sorry - your action could not be added. Please try again!'})
-    });
+    if (req.body.description.length > 128) {
+      res.status(422).json({ message: 'Plase create a description that is fewer than 128 characters in length'});
+    }
+    else {
+      actionDb.insert(req.body).then(id => {
+        res.status(201).json({ message: 'Your action was successfully added'})
+      }).catch(err => {
+        res.status(500).json({ message: 'Sorry - your action could not be added. Please try again!'})
+      });
+    }
   }
   else {
     res.status(422).json({ message: 'You must provide a description, a project id, and notes to save your action'})
@@ -45,16 +50,21 @@ router.post('/', (req, res) => {
 
 router.put('/:id', (req, res) => {
   if (req.body.project_id && req.body.notes && req.body.description) {
-    actionDb.update(req.params.id, req.body).then(action => {
-      if (action === null) {
-        res.status(404).json({ message: 'Sorry, a action with the specified id could not be located'})
-      }
-      else {
-        res.status(201).json(action)
-      }
-    }).catch(err => {
-      res.status(500).json({ message: 'Sorry, your updates could not be saved :('})
-    })
+    if (req.body.description.length > 128) {
+      res.status(422).json({ message: 'Plase create a description that is fewer than 128 characters in length'})
+    }
+    else {
+      actionDb.update(req.params.id, req.body).then(action => {
+        if (action === null) {
+          res.status(404).json({ message: 'Sorry, a action with the specified id could not be located'})
+        }
+        else {
+          res.status(201).json(action)
+        }
+      }).catch(err => {
+        res.status(500).json({ message: 'Sorry, your updates could not be saved :('})
+      })
+    }
   }
   else {
     res.status(422).json({ message: 'You must provide a description, a project id, and notes to save your action'})
@@ -62,7 +72,7 @@ router.put('/:id', (req, res) => {
 })
 
 router.delete('/:id', (req, res) => {
-  actionDb.delete(req.params.id).then(count => {
+  actionDb.remove(req.params.id).then(count => {
     if (count !== 1) {
       res.status(404).json({ message: 'Sorry, the action with the specified id could not be found'})
     }

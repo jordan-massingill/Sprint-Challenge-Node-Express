@@ -18,25 +18,36 @@ router.get('/', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  projectDb.get(req.params.id).then(project => {
-    if (project === undefined) {
-      res.status(404).json({ message: 'Sorry - there is no project with the specified id.'})
+  let projects = [];
+  projectDb.get().then(results => {
+    projects = results;
+    const myProject = projects.find(project => project.id === parseInt(req.params.id));
+    if (myProject !== undefined) {
+      projectDb.get(parseInt(req.params.id)).then(project => {
+        res.status(200).json(project);
+      }).catch(err => {
+        console.log(err);
+        res.status(500).json({ message: 'Sorry, we were unable to retrieve your project from the server :('})
+      })
     }
     else {
-      res.status(200).json(project);
+      res.status(404).json({ message: 'Sorry - there is no project with the specified id.'})
     }
-  }).catch(err => {
-    res.status(500).json({ message: 'Sorry, we were unable to retrieve your project from the server :('})
-  })
+  });
 });
 
 router.post('/', (req, res) => {
   if (req.body.name && req.body.description) {
-    projectDb.insert(req.body).then(id => {
-      res.status(201).json({ message: 'Your project was successfully added'})
-    }).catch(err => {
-      res.status(500).json({ message: 'Sorry - your project could not be added. Please try again!'})
-    });
+    if (req.body.name.length > 128) {
+      res.status(422).json({ message: 'Please select a name that is shorter than 128 characters in length'})
+    }
+    else {
+      projectDb.insert(req.body).then(id => {
+        res.status(201).json({ message: 'Your project was successfully added'})
+      }).catch(err => {
+        res.status(500).json({ message: 'Sorry - your project could not be added. Please try again!'})
+      });
+    }
   }
   else {
     res.status(422).json({ message: 'You must provide both a name and a description to save your project'})
@@ -45,16 +56,21 @@ router.post('/', (req, res) => {
 
 router.put('/:id', (req, res) => {
   if (req.body.name && req.body.description) {
-    projectDb.update(req.params.id, req.body).then(project => {
-      if (project === null) {
-        res.status(404).json({ message: 'Sorry, a project with the specified id could not be located'})
-      }
-      else {
-        res.status(201).json(project)
-      }
-    }).catch(err => {
-      res.status(500).json({ message: 'Sorry, your updates could not be saved :('})
-    })
+    if (req.body.name.length > 128) {
+      res.status(422).json({ message: 'Please select a name that is shorter than 128 characters in length'})
+    }
+    else {
+      projectDb.update(req.params.id, req.body).then(project => {
+        if (project === null) {
+          res.status(404).json({ message: 'Sorry, a project with the specified id could not be located'})
+        }
+        else {
+          res.status(201).json(project)
+        }
+      }).catch(err => {
+        res.status(500).json({ message: 'Sorry, your updates could not be saved :('})
+      })
+    }
   }
   else {
     res.status(422).json({ message: 'A project must have both a name and a description to be saved'})
@@ -62,7 +78,7 @@ router.put('/:id', (req, res) => {
 })
 
 router.delete('/:id', (req, res) => {
-  projectDb.delete(req.params.id).then(count => {
+  projectDb.remove(req.params.id).then(count => {
     if (count !== 1) {
       res.status(404).json({ message: 'Sorry, the project with the specified id could not be found'})
     }
